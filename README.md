@@ -1,16 +1,24 @@
 # AutoKey Sender
 
-Local keystroke automation with safety, profiles, and logging.
+Local keystroke automation. No app store account needed.
 
-## Run
+## No-install run
 ```bash
 python -m autokey.ui
 ```
 
-## Install
+## Install package
 ```bash
 pip install -e .
 ```
+
+## Build standalone EXE
+```bash
+pip install -e .[exe-build]
+python build/build_exe.py
+```
+
+Output: `dist/autokey.exe`
 
 ## Dev
 ```bash

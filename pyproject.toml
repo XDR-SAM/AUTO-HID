@@ -15,11 +15,17 @@ dependencies = [
     "Pillow>=10.0.0"
 ]
 
+[project.scripts]
+autokey = "autokey.ui:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.4.0"
+]
+exe-build = [
+    "pyinstaller>=6.0"
 ]
 
 [tool.setuptools.packages.find]
