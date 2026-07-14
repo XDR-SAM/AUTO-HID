@@ -1,4 +1,9 @@
-from __future__ import annotations
+"""AutoKey main user interface module.
+
+Defines the primary tkinter application window, including text input,
+send/abort controls, settings management, status display, and a worker
+thread that hands text delivery off to :mod:`autokey.sender`.
+"""
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
@@ -13,12 +18,39 @@ from autokey.utils import init_logger, now_iso
 SETTINGS_PATH = Path(__file__).with_name("settings.json")
 LOG_PATH = Path(__file__).with_name("logs").joinpath("autokey.log")
 
-
 DEFAULT_TEXT = ""
 
 
 class App:
+    """Main tkinter application window for the AutoKey GUI.
+
+    Responsibilities include collecting text from the user, validating
+    inputs, coordinating worker-thread sends via :class:`KeystrokeSender`,
+    reflecting results back into the UI, and providing a modal
+    settings editor.
+
+    Attributes:
+        root: Root ``tk.Tk`` window owning the interface.
+        settings: Loaded runtime settings from :class:`autokey.config.Settings`.
+        logger: File-backed :class:`logging.Logger` instance.
+        sender: :class:`KeystrokeSender` instance used for the current send.
+        worker: Background thread handle for the active send task, or ``None``.
+        text_area: Scrollable text widget for user input.
+        char_count_var: Current character count string bindable to labels.
+        progress_var: Sending progress number between 0 and 100.
+        progress: ``ttk.Progressbar`` widget driven by ``progress_var``.
+        status_var: Human-readable status string bindable to status labels.
+        start_btn: Action button to start sending.
+        abort_btn: Action button to request cancellation of an active send.
+        settings_btn: Action button to open the settings editor dialog.
+    """
+
     def __init__(self, root: tk.Tk) -> None:
+        """Initialize the application window and connected components.
+
+        Args:
+            root: Root ``tk.Tk`` window to turn into the AutoKey UI.
+        """
         self.root = root
         self.settings = Settings.load(SETTINGS_PATH)
         self.logger = init_logger(LOG_PATH)
@@ -35,6 +67,7 @@ class App:
         self.logger.info("App started")
 
     def _build_ui(self) -> None:
+        """Construct and pack all primary interface widgets."""
         pad = {"padx": 10, "pady": 6}
 
         top = ttk.Frame(self.root)
@@ -78,9 +111,16 @@ class App:
         self.settings_btn.pack(side=tk.LEFT)
 
     def _bind_keys(self) -> None:
+        """Bind keyboard shortcuts to application actions."""
         self.root.bind("<Escape>", lambda e: self._on_abort(), add="+")
 
     def _on_text_changed(self, event: tk.Event) -> None:
+        """Update the live character count when the text widget content changes.
+
+        Args:
+            event: Tkinter widget event from the ``<<Modified>>`` virtual
+                event emitted by the text area.
+        """
         if event.widget is not self.text_area:
             return
         text = self.text_area.get("1.0", "end-1c")
@@ -92,9 +132,19 @@ class App:
             pass
 
     def _status(self, text: str) -> None:
+        """Set the exposed status string shown in the status bar label.
+
+        Args:
+            text: Status message to display.
+        """
         self.status_var.set(text)
 
     def _on_start(self) -> None:
+        """Validate request state and user inputs, then begin a send.
+
+        Disables controls, launches :meth:`_run_send` on a background
+        thread, and updates UI state to reflect the pending operation.
+        """
         if self.sender.is_running:
             messagebox.showwarning("Busy", "A send is already in progress.")
             return
@@ -126,6 +176,11 @@ class App:
         self.worker.start()
 
     def _run_send(self, text: str) -> None:
+        """Execute the send on a worker thread and route progress to the UI.
+
+        Args:
+            text: Text payload to deliver via the sender.
+        """
         def progress(msg: str) -> None:
             self.root.after(0, self._status, msg)
 
@@ -133,6 +188,12 @@ class App:
         self.root.after(0, self._finish_send, result)
 
     def _finish_send(self, result) -> None:
+        """Finalize UI state after the sender returns a result.
+
+        Args:
+            result: :class:`~autokey.sender.SendResult` returned from
+                :meth:`KeystrokeSender.send`.
+        """
         self.start_btn.config(state=tk.NORMAL)
         self.abort_btn.config(state=tk.DISABLED)
         self.text_area.config(state=tk.NORMAL)
@@ -156,15 +217,22 @@ class App:
             self._on_text_changed(tk.Event())
 
     def _append_log(self, message: str) -> None:
+        """Record a brief event message to the logger.
+
+        Args:
+            message: Short description of the UI event to log.
+        """
         # hook for later file/history panel logging
         self.logger.info(message)
 
     def _on_abort(self) -> None:
+        """Request cancellation of the active send if one is running."""
         if self.sender.is_running:
             self.sender.cancel()
             self._status("Cancelling...")
 
     def _open_settings(self) -> None:
+        """Open the settings editor modal dialog."""
         win = tk.Toplevel(self.root)
         win.title("Settings")
         win.geometry("380x260")
@@ -211,6 +279,7 @@ class App:
 
 
 def main() -> None:
+    """Launch the AutoKey GUI application."""
     root = tk.Tk()
     App(root)
     root.mainloop()

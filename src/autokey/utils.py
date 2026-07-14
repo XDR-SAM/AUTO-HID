@@ -1,3 +1,9 @@
+"""AutoKey utility helpers.
+
+Provides logging initialization and time formatting utilities reused
+across the application.
+"""
+
 import os
 import sys
 import time
@@ -11,6 +17,18 @@ from autokey.config import Settings
 
 
 def init_logger(log_path: str | Path) -> Logger:
+    """Create a file-backed logger for the application.
+
+    The logger always writes to a UTF-8 log file; parent directories are
+    created automatically.
+
+    Args:
+        log_path: Destination log file path.
+
+    Returns:
+        Configured stdlib ``Logger`` instance with a single ``FileHandler``
+        attached.
+    """
     # Use stdlib here so the app has zero extra dependency friction.
     log = Logger("autokey")
     log_path = Path(log_path)
@@ -24,4 +42,9 @@ def init_logger(log_path: str | Path) -> Logger:
 
 
 def now_iso() -> str:
+    """Return the current local time formatted as ISO 8601 without microseconds.
+
+    Returns:
+        Current timestamp string using ``datetime.isoformat(timespec='seconds')``.
+    """
     return datetime.now().isoformat(timespec="seconds")
